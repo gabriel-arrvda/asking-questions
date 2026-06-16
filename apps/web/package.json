@@ -1,0 +1,39 @@
+{
+  "name": "@fatec-study/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "ng serve --host 0.0.0.0 --port 4200",
+    "build": "ng build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "@angular/animations": "20.3.25",
+    "@angular/common": "20.3.25",
+    "@angular/compiler": "20.3.25",
+    "@angular/core": "20.3.25",
+    "@angular/forms": "20.3.25",
+    "@angular/platform-browser": "20.3.25",
+    "@angular/router": "20.3.25",
+    "rxjs": "^7.8.2",
+    "tslib": "^2.8.1",
+    "zone.js": "^0.15.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "20.3.28",
+    "@angular/cli": "20.3.28",
+    "@angular/compiler-cli": "20.3.25",
+    "@eslint/js": "^9.35.0",
+    "@types/node": "^24.5.0",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.35.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.44.0",
+    "vitest": "^3.2.0"
+  }
+}

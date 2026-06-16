@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AnswerMode {
+  ALTERNATIVE
+  WRITTEN
+}
+
+model Exam {
+  id           String     @id @default(cuid())
+  code         String     @unique
+  year         Int
+  semester     String
+  title        String
+  detailUrl    String
+  examPdfUrl   String?
+  answerPdfUrl String?
+  questions    Question[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Question {
+  id                 String          @id @default(cuid())
+  examId             String
+  exam               Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  number             Int
+  category           String
+  statement          String
+  alternatives       Json
+  correctAlternative String
+  sourcePage         Int?
+  sourcePdfUrl       String?
+  assets             QuestionAsset[]
+  explanation        Explanation?
+  attempts           Attempt[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@unique([examId, number])
+  @@index([category])
+}
+
+model AnswerKey {
+  id                 String   @id @default(cuid())
+  examId             String
+  questionNumber     Int
+  correctAlternative String
+  category           String
+  createdAt          DateTime @default(now())
+
+  @@unique([examId, questionNumber])
+}
+
+model QuestionAsset {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  kind       String
+  path       String
+  page       Int?
+  createdAt  DateTime @default(now())
+}
+
+model Explanation {
+  id                    String   @id @default(cuid())
+  questionId            String   @unique
+  question              Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  model                 String
+  promptVersion         String
+  correctAnswer         String
+  steps                 Json
+  wrongAlternativeNotes Json
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Attempt {
+  id                  String     @id @default(cuid())
+  questionId          String
+  question            Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answerMode          AnswerMode
+  selectedAlternative String?
+  writtenAnswer       String?
+  normalizedAnswer    String
+  isCorrect           Boolean
+  createdAt           DateTime   @default(now())
+
+  @@index([questionId])
+}

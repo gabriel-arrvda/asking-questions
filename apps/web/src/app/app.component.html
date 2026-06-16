@@ -1,0 +1,113 @@
+<main class="study-shell">
+  <section class="topbar" aria-label="Filtros de estudo">
+    <div>
+      <p class="eyebrow">Fatec Study</p>
+      <h1>Resolva uma questao por vez.</h1>
+    </div>
+
+    <div class="filters">
+      <label>
+        Categoria
+        <select [ngModel]="selectedCategory()" (ngModelChange)="selectedCategory.set($event); loadNextQuestion()">
+          <option value="">Todas</option>
+          <option *ngFor="let category of categories()" [value]="category.name">
+            {{ category.name }} ({{ category.count }})
+          </option>
+        </select>
+      </label>
+
+      <label>
+        Prova
+        <select [ngModel]="selectedExamId()" (ngModelChange)="selectedExamId.set($event); loadNextQuestion()">
+          <option value="">Todas</option>
+          <option *ngFor="let exam of exams()" [value]="exam.id">
+            {{ exam.title }}
+          </option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="stats-strip" aria-label="Estatisticas locais">
+    <div>
+      <span>{{ stats().total }}</span>
+      <p>respondidas</p>
+    </div>
+    <div>
+      <span>{{ accuracy() }}%</span>
+      <p>aproveitamento</p>
+    </div>
+    <div>
+      <span>{{ stats().correct }}</span>
+      <p>acertos</p>
+    </div>
+    <button type="button" (click)="resetStats()" [disabled]="stats().total === 0">Limpar</button>
+  </section>
+
+  <p class="status error" *ngIf="error()" role="alert">{{ error() }}</p>
+  <p class="status" *ngIf="loading()">Buscando uma questao...</p>
+
+  <article class="question-card" *ngIf="question() as current">
+    <header class="question-meta">
+      <div>
+        <p class="eyebrow">{{ current.category }}</p>
+        <h2>Questao {{ current.number }}</h2>
+      </div>
+      <span>{{ current.exam.year }} / {{ current.exam.semester }} semestre</span>
+    </header>
+
+    <p class="statement">{{ current.statement }}</p>
+
+    <figure class="asset" *ngIf="current.assets.length > 0">
+      <img [src]="assetUrl(current.assets[0].path)" alt="Recorte visual da questao no PDF original">
+      <figcaption>Imagem preservada do PDF original.</figcaption>
+    </figure>
+
+    <div class="alternatives" aria-label="Alternativas">
+      <button
+        type="button"
+        *ngFor="let alternative of current.alternatives | keyvalue"
+        [class.selected]="selectedAlternative() === alternative.key"
+        [class.correct]="result()?.isCorrect && result()?.correctAlternative === alternative.key"
+        [class.wrong]="result() && selectedAlternative() === alternative.key && !result()?.isCorrect"
+        [disabled]="submitting() || answered()"
+        (click)="chooseAlternative(alternative.key)"
+      >
+        <strong>{{ alternative.key }}</strong>
+        <span>{{ alternative.value }}</span>
+      </button>
+    </div>
+
+    <form class="written-answer" (ngSubmit)="submitWritten()">
+      <label for="writtenAnswer">Ou escreva a resposta final</label>
+      <div>
+        <input
+          id="writtenAnswer"
+          name="writtenAnswer"
+          type="text"
+          placeholder="Ex.: C ou o valor final"
+          [ngModel]="writtenAnswer()"
+          (ngModelChange)="writtenAnswer.set($event)"
+          [disabled]="submitting() || answered()"
+        >
+        <button type="submit" [disabled]="submitting() || answered()">Enviar</button>
+      </div>
+    </form>
+
+    <section class="result-panel" *ngIf="result() as correction" aria-live="polite">
+      <div class="result-heading" [class.ok]="correction.isCorrect">
+        <span>{{ correction.isCorrect ? 'Correta' : 'Incorreta' }}</span>
+        <p>Gabarito: alternativa {{ correction.correctAlternative }}</p>
+      </div>
+
+      <p class="probable-error" *ngIf="correction.probableError">{{ correction.probableError }}</p>
+
+      <h3>Passo a passo</h3>
+      <ol>
+        <li *ngFor="let step of correction.explanation.steps">{{ step }}</li>
+      </ol>
+
+      <button class="next-button" type="button" (click)="loadNextQuestion()">Proxima questao</button>
+    </section>
+  </article>
+</main>

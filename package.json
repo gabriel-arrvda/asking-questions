@@ -1,0 +1,23 @@
+{
+  "name": "fatec-study-platform",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @fatec-study/api",
+    "dev:api": "npm run dev -w @fatec-study/api",
+    "dev:web": "npm run start -w @fatec-study/web",
+    "build": "npm run build -w @fatec-study/api && npm run build -w @fatec-study/web",
+    "test": "npm run test -w @fatec-study/api && npm run test -w @fatec-study/web",
+    "lint": "npm run lint -w @fatec-study/api && npm run lint -w @fatec-study/web",
+    "db:migrate": "npm run prisma:migrate -w @fatec-study/api",
+    "db:generate": "npm run prisma:generate -w @fatec-study/api",
+    "import:fatec": "npm run import:fatec -w @fatec-study/api"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

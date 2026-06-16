@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.angular/
+.nx/
+.turbo/
+.cache/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+uploads/
+.superpowers/
+*.log
+.DS_Store
