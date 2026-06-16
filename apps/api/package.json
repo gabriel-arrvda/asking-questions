@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nest start --watch",
     "start": "node dist/src/main.js",
+    "prebuild": "prisma generate",
     "build": "nest build",
     "test": "vitest run",
     "test:watch": "vitest",
