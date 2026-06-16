@@ -56,7 +56,7 @@ Secrets necessarios no GitHub em `Settings > Secrets and variables > Actions`:
 
 - `VPS_HOST`: IP ou dominio da VPS.
 - `VPS_USER`: usuario SSH.
-- `VPS_SSH_KEY`: chave privada SSH com acesso a VPS.
+- `VPS_SSH_KEY_B64`: chave privada SSH em base64, sem passphrase. Preferencial.
 - `VPS_APP_DIR`: caminho do projeto na VPS, por exemplo `/var/www/fatec-study`.
 - `POSTGRES_PASSWORD`: senha do Postgres em producao.
 - `GEMINI_API_KEY`: chave da API Gemini.
@@ -68,6 +68,7 @@ Secrets opcionais:
 - `POSTGRES_USER`: padrao `fatec`.
 - `POSTGRES_DB`: padrao `fatec_study`.
 - `DATABASE_URL`: URL completa do Prisma. Use se a senha tiver caracteres especiais e voce preferir informar a URL ja escapada.
+- `VPS_SSH_KEY`: chave privada SSH em texto. Use apenas se nao quiser usar `VPS_SSH_KEY_B64`.
 
 Preparacao inicial na VPS:
 
@@ -78,6 +79,20 @@ sudo mkdir -p /var/www
 sudo chown -R $USER:$USER /var/www
 git clone <url-do-repositorio> /var/www/fatec-study
 mkdir -p /var/www/fatec-study/provas
+```
+
+Gerando uma chave SSH para o deploy:
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions-fatec-study" -f ~/.ssh/fatec_study_deploy -N ""
+ssh-copy-id -i ~/.ssh/fatec_study_deploy.pub usuario@IP_DA_VPS
+base64 -i ~/.ssh/fatec_study_deploy | pbcopy
+```
+
+Cole o valor copiado no secret `VPS_SSH_KEY_B64`. Em Linux, troque o ultimo comando por:
+
+```bash
+base64 -w 0 ~/.ssh/fatec_study_deploy
 ```
 
 Depois disso, pushes na `main` fazem deploy automatico. Para reimportar as provas, rode o workflow manualmente em `Actions > Deploy VPS > Run workflow` marcando `run_import`.
