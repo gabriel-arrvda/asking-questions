@@ -1,0 +1,46 @@
+<main class="flashcards-shell">
+  <header class="flashcards-top">
+    <div>
+      <p class="eyebrow">NotebookLM cards</p>
+      <h1>Revise formulas em cards.</h1>
+    </div>
+    <button type="button" class="study-link" (click)="goStudy()">Voltar para questoes</button>
+  </header>
+
+  <section class="flashcards-panel" *ngIf="currentCard() as card">
+    <div class="deck-bar">
+      <div>
+        <p>{{ currentIndex() + 1 }} de {{ cards().length }}</p>
+        <strong>Formulas e conceitos essenciais</strong>
+      </div>
+      <div class="progress" aria-label="Progresso do deck">
+        <span [style.width.%]="progress()"></span>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="flashcard-stage"
+      [class.flipped]="flipped()"
+      (click)="flip()"
+      aria-live="polite"
+    >
+      <span class="card-face card-front">
+        <span class="face-label">Frente</span>
+        <strong [innerHTML]="card.front | math"></strong>
+        <small>Clique para virar</small>
+      </span>
+      <span class="card-face card-back">
+        <span class="face-label">Verso</span>
+        <strong [innerHTML]="card.back | math"></strong>
+        <small>Clique para voltar</small>
+      </span>
+    </button>
+
+    <div class="card-actions" aria-label="Navegacao dos flashcards">
+      <button type="button" class="arrow-button" (click)="previous()" aria-label="Card anterior">←</button>
+      <button type="button" class="flip-button" (click)="flip()">{{ flipped() ? 'Ver frente' : 'Virar card' }}</button>
+      <button type="button" class="arrow-button" (click)="next()" aria-label="Proximo card">→</button>
+    </div>
+  </section>
+</main>

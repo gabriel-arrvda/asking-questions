@@ -3,6 +3,8 @@ import { Component, HostListener, OnDestroy, OnInit, computed, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { ApiService } from './api.service';
 import { AttemptResult, Category, Exam, ExplanationReadyEvent, Question } from './api.types';
+import { FlashcardsComponent } from './flashcards.component';
+import { MathPipe } from './math.pipe';
 import { EMPTY_STATS, StudyStats, calculateAccuracy, updateStats } from './study-stats';
 
 const STORAGE_KEY = 'fatec-study-stats-v1';
@@ -10,7 +12,7 @@ const STORAGE_KEY = 'fatec-study-stats-v1';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FlashcardsComponent, MathPipe],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
@@ -31,14 +33,17 @@ export class AppComponent implements OnInit, OnDestroy {
   writtenAnswer = signal('');
   imageZoom = signal(1);
   imageViewerOpen = signal(false);
+  currentPath = signal(window.location.pathname);
   private explanationStream?: EventSource;
 
   accuracy = computed(() => calculateAccuracy(this.stats()));
   answered = computed(() => this.result() !== null);
+  isFlashcards = computed(() => this.currentPath().startsWith('/flashcards'));
 
   constructor(private readonly api: ApiService) {}
 
   ngOnInit() {
+    window.addEventListener('popstate', this.handlePopState);
     this.loadFilters();
     this.loadNextQuestion();
   }
@@ -49,6 +54,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.closeExplanationStream();
+    window.removeEventListener('popstate', this.handlePopState);
   }
 
   @HostListener('document:keydown.escape')
@@ -106,6 +112,12 @@ export class AppComponent implements OnInit, OnDestroy {
   skipQuestion() {
     if (this.loading() || this.submitting()) return;
     this.loadNextQuestion();
+  }
+
+  goTo(path: '/' | '/flashcards') {
+    window.history.pushState({}, '', path);
+    this.currentPath.set(path);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   submitWritten() {
@@ -223,4 +235,8 @@ export class AppComponent implements OnInit, OnDestroy {
       return EMPTY_STATS;
     }
   }
+
+  private handlePopState = () => {
+    this.currentPath.set(window.location.pathname);
+  };
 }

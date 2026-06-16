@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import 'katex/dist/katex.min.css';
 
 :root {
   --bg: #fbf4eb;
@@ -55,6 +56,21 @@ select:focus-visible,
 textarea:focus-visible {
   outline: 3px solid rgba(217, 107, 82, 0.48);
   outline-offset: 3px;
+}
+
+.katex {
+  font-size: 1em;
+}
+
+.katex-display {
+  margin: 0.65em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.15rem;
+}
+
+.katex-html {
+  white-space: normal;
 }
 
 @media (prefers-reduced-motion: reduce) {

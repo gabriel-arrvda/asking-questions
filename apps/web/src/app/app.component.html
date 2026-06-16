@@ -1,8 +1,14 @@
-<main class="study-shell">
+<app-flashcards *ngIf="isFlashcards()"></app-flashcards>
+
+<main class="study-shell" *ngIf="!isFlashcards()">
   <section class="topbar" aria-label="Filtros de estudo">
     <div>
       <p class="eyebrow">Fatec Study</p>
       <h1>Resolva uma questao por vez.</h1>
+      <nav class="desktop-nav" aria-label="Navegacao principal">
+        <button type="button" class="active" (click)="goTo('/')">Questoes</button>
+        <button type="button" (click)="goTo('/flashcards')">Flashcards</button>
+      </nav>
     </div>
 
     <div class="filters">
@@ -60,7 +66,7 @@
       </div>
     </header>
 
-    <p class="statement">{{ current.statement }}</p>
+    <p class="statement" [innerHTML]="current.statement | math"></p>
 
     <figure class="asset" *ngIf="current.assets.length > 0">
       <div class="asset-toolbar" aria-label="Controles da imagem">
@@ -85,7 +91,7 @@
         [class.wrong]="result() && submittedAlternative() === alternative.key && result()?.correctAlternative !== alternative.key"
         [disabled]="submitting() || answered()" (click)="chooseAlternative(alternative.key)">
         <strong>({{ alternative.key }})</strong>
-        <span>{{ alternative.value }}</span>
+        <span [innerHTML]="alternative.value | math"></span>
       </button>
     </div>
 
@@ -113,7 +119,7 @@
       <ng-container *ngIf="correction.explanation as explanation">
         <h3>Passo a passo</h3>
         <ol>
-          <li *ngFor="let step of explanation.steps">{{ step }}</li>
+          <li *ngFor="let step of explanation.steps" [innerHTML]="step | math"></li>
         </ol>
       </ng-container>
 
@@ -136,4 +142,26 @@
       <img *ngIf="modalQuestion.assets.length > 0" [src]="assetUrl(modalQuestion.assets[0].path)" [style.transform]="'scale(' + imageZoom() + ')'" alt="Imagem da questao no PDF original" (click)="$event.stopPropagation()">
     </div>
   </section>
+
+  <nav class="mobile-tabbar" aria-label="Navegacao principal mobile">
+    <button type="button" class="active" (click)="goTo('/')">
+      <span>Q</span>
+      Questoes
+    </button>
+    <button type="button" (click)="goTo('/flashcards')">
+      <span>C</span>
+      Cards
+    </button>
+  </nav>
 </main>
+
+<nav class="mobile-tabbar" *ngIf="isFlashcards()" aria-label="Navegacao principal mobile">
+  <button type="button" (click)="goTo('/')">
+    <span>Q</span>
+    Questoes
+  </button>
+  <button type="button" class="active" (click)="goTo('/flashcards')">
+    <span>C</span>
+    Cards
+  </button>
+</nav>
