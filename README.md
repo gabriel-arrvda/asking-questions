@@ -48,6 +48,40 @@ docker compose exec api npm run import:fatec:prod -w @fatec-study/api
 
 Quando a pasta `provas` existir, a API prioriza esses PDFs locais em vez de tentar buscar no site da Fatec.
 
+## Deploy na VPS com GitHub Actions
+
+O workflow `.github/workflows/deploy-vps.yml` roda lint, testes e build. Se tudo passar, ele acessa a VPS via SSH, atualiza a branch `main`, recria os containers, roda migrations Prisma e, opcionalmente, importa as provas.
+
+Secrets necessarios no GitHub em `Settings > Secrets and variables > Actions`:
+
+- `VPS_HOST`: IP ou dominio da VPS.
+- `VPS_USER`: usuario SSH.
+- `VPS_SSH_KEY`: chave privada SSH com acesso a VPS.
+- `VPS_APP_DIR`: caminho do projeto na VPS, por exemplo `/var/www/fatec-study`.
+- `POSTGRES_PASSWORD`: senha do Postgres em producao.
+- `GEMINI_API_KEY`: chave da API Gemini.
+- `CORS_ORIGIN`: origem publica do frontend, por exemplo `https://seudominio.com`.
+
+Secrets opcionais:
+
+- `VPS_PORT`: porta SSH, padrao `22`.
+- `POSTGRES_USER`: padrao `fatec`.
+- `POSTGRES_DB`: padrao `fatec_study`.
+- `DATABASE_URL`: URL completa do Prisma. Use se a senha tiver caracteres especiais e voce preferir informar a URL ja escapada.
+
+Preparacao inicial na VPS:
+
+```bash
+sudo apt update
+sudo apt install -y git docker.io docker-compose-plugin
+sudo mkdir -p /var/www
+sudo chown -R $USER:$USER /var/www
+git clone <url-do-repositorio> /var/www/fatec-study
+mkdir -p /var/www/fatec-study/provas
+```
+
+Depois disso, pushes na `main` fazem deploy automatico. Para reimportar as provas, rode o workflow manualmente em `Actions > Deploy VPS > Run workflow` marcando `run_import`.
+
 ## Importando Provas da Fatec
 
 Com a API rodando:
