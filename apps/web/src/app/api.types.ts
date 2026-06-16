@@ -31,12 +31,23 @@ export type Question = {
 };
 
 export type AttemptResult = {
+  attemptId: string;
   isCorrect: boolean;
   correctAlternative: string;
-  explanation: {
+  explanationStatus: 'READY' | 'PENDING';
+  explanation: ExplanationPayload | null;
+  probableError?: string | null;
+};
+
+export type ExplanationPayload = {
     correctAnswer: string;
     steps: string[];
     wrongAlternativeNotes: Record<string, string>;
-  };
+};
+
+export type ExplanationReadyEvent = {
+  attemptId: string;
+  questionId: string;
+  explanation: ExplanationPayload;
   probableError?: string | null;
 };

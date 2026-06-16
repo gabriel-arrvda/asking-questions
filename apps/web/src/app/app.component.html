@@ -53,27 +53,38 @@
         <p class="eyebrow">{{ current.category }}</p>
         <h2>Questao {{ current.number }}</h2>
       </div>
-      <span>{{ current.exam.year }} / {{ current.exam.semester }} semestre</span>
+      <div class="question-actions">
+        <span>{{ current.exam.year }} / {{ current.exam.semester }} semestre</span>
+        <button type="button" class="skip-button" (click)="skipQuestion()"
+          [disabled]="loading() || submitting()">Pular</button>
+      </div>
     </header>
 
     <p class="statement">{{ current.statement }}</p>
 
     <figure class="asset" *ngIf="current.assets.length > 0">
-      <img [src]="assetUrl(current.assets[0].path)" alt="Recorte visual da questao no PDF original">
-      <figcaption>Imagem preservada do PDF original.</figcaption>
+      <div class="asset-toolbar" aria-label="Controles da imagem">
+        <figcaption>Imagem preservada do PDF original</figcaption>
+        <div>
+          <button type="button" (click)="decreaseImageZoom()" [disabled]="imageZoom() <= 0.75" aria-label="Diminuir zoom da imagem">-</button>
+          <span>{{ imageZoom() * 100 | number:'1.0-0' }}%</span>
+          <button type="button" (click)="increaseImageZoom()" [disabled]="imageZoom() >= 3" aria-label="Aumentar zoom da imagem">+</button>
+          <button type="button" (click)="resetImageZoom()" aria-label="Restaurar zoom da imagem">100%</button>
+          <button type="button" (click)="openImageViewer()" aria-label="Abrir imagem em tela cheia">Tela cheia</button>
+        </div>
+      </div>
+      <div class="asset-viewport">
+        <img [src]="assetUrl(current.assets[0].path)" [style.transform]="'scale(' + imageZoom() + ')'" alt="Recorte visual da questao no PDF original">
+      </div>
     </figure>
 
     <div class="alternatives" aria-label="Alternativas">
-      <button
-        type="button"
-        *ngFor="let alternative of current.alternatives | keyvalue"
+      <button type="button" *ngFor="let alternative of current.alternatives | keyvalue"
         [class.selected]="selectedAlternative() === alternative.key"
-        [class.correct]="result()?.isCorrect && result()?.correctAlternative === alternative.key"
-        [class.wrong]="result() && selectedAlternative() === alternative.key && !result()?.isCorrect"
-        [disabled]="submitting() || answered()"
-        (click)="chooseAlternative(alternative.key)"
-      >
-        <strong>{{ alternative.key }}</strong>
+        [class.correct]="result() && result()?.correctAlternative === alternative.key"
+        [class.wrong]="result() && submittedAlternative() === alternative.key && result()?.correctAlternative !== alternative.key"
+        [disabled]="submitting() || answered()" (click)="chooseAlternative(alternative.key)">
+        <strong>({{ alternative.key }})</strong>
         <span>{{ alternative.value }}</span>
       </button>
     </div>
@@ -81,33 +92,48 @@
     <form class="written-answer" (ngSubmit)="submitWritten()">
       <label for="writtenAnswer">Ou escreva a resposta final</label>
       <div>
-        <input
-          id="writtenAnswer"
-          name="writtenAnswer"
-          type="text"
-          placeholder="Ex.: C ou o valor final"
-          [ngModel]="writtenAnswer()"
-          (ngModelChange)="writtenAnswer.set($event)"
-          [disabled]="submitting() || answered()"
-        >
-        <button type="submit" [disabled]="submitting() || answered()">Enviar</button>
+        <input id="writtenAnswer" name="writtenAnswer" type="text" placeholder="Ex.: C ou o valor final"
+          [ngModel]="writtenAnswer()" (ngModelChange)="writtenAnswer.set($event)"
+          [disabled]="submitting() || answered()">
+        <button type="submit" [disabled]="submitting() || answered()">
+          {{ submitting() ? 'Corrigindo...' : 'Enviar' }}
+        </button>
       </div>
     </form>
 
-    <section class="result-panel" *ngIf="result() as correction" aria-live="polite">
+    <section id="resultPanel" class="result-panel" *ngIf="result() as correction" aria-live="polite" tabindex="-1">
       <div class="result-heading" [class.ok]="correction.isCorrect">
         <span>{{ correction.isCorrect ? 'Correta' : 'Incorreta' }}</span>
         <p>Gabarito: alternativa {{ correction.correctAlternative }}</p>
       </div>
 
       <p class="probable-error" *ngIf="correction.probableError">{{ correction.probableError }}</p>
+      <p class="explanation-loading" *ngIf="explanationLoading()">Buscando explicacao com IA...</p>
 
-      <h3>Passo a passo</h3>
-      <ol>
-        <li *ngFor="let step of correction.explanation.steps">{{ step }}</li>
-      </ol>
+      <ng-container *ngIf="correction.explanation as explanation">
+        <h3>Passo a passo</h3>
+        <ol>
+          <li *ngFor="let step of explanation.steps">{{ step }}</li>
+        </ol>
+      </ng-container>
 
       <button class="next-button" type="button" (click)="loadNextQuestion()">Proxima questao</button>
     </section>
   </article>
+
+  <section class="image-modal" *ngIf="imageViewerOpen() && question() as modalQuestion" role="dialog" aria-modal="true" aria-label="Imagem da questao em tela cheia">
+    <div class="image-modal-bar">
+      <strong>Questao {{ modalQuestion.number }}</strong>
+      <div>
+        <button type="button" (click)="decreaseImageZoom()" [disabled]="imageZoom() <= 0.75" aria-label="Diminuir zoom da imagem">-</button>
+        <span>{{ imageZoom() * 100 | number:'1.0-0' }}%</span>
+        <button type="button" (click)="increaseImageZoom()" [disabled]="imageZoom() >= 3" aria-label="Aumentar zoom da imagem">+</button>
+        <button type="button" (click)="resetImageZoom()">100%</button>
+        <button type="button" class="close-modal" (click)="closeImageViewer()">Fechar</button>
+      </div>
+    </div>
+    <div class="image-modal-stage" (click)="closeImageViewer()">
+      <img *ngIf="modalQuestion.assets.length > 0" [src]="assetUrl(modalQuestion.assets[0].path)" [style.transform]="'scale(' + imageZoom() + ')'" alt="Imagem da questao no PDF original" (click)="$event.stopPropagation()">
+    </div>
+  </section>
 </main>

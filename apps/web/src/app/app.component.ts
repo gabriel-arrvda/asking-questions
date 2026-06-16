@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from './api.service';
-import { AttemptResult, Category, Exam, Question } from './api.types';
+import { AttemptResult, Category, Exam, ExplanationReadyEvent, Question } from './api.types';
 import { EMPTY_STATS, StudyStats, calculateAccuracy, updateStats } from './study-stats';
 
 const STORAGE_KEY = 'fatec-study-stats-v1';
@@ -14,7 +14,7 @@ const STORAGE_KEY = 'fatec-study-stats-v1';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   categories = signal<Category[]>([]);
   exams = signal<Exam[]>([]);
   question = signal<Question | null>(null);
@@ -22,11 +22,16 @@ export class AppComponent implements OnInit {
   stats = signal<StudyStats>(this.loadStats());
   loading = signal(false);
   submitting = signal(false);
+  explanationLoading = signal(false);
   error = signal<string | null>(null);
   selectedCategory = signal('');
   selectedExamId = signal('');
   selectedAlternative = signal('');
+  submittedAlternative = signal('');
   writtenAnswer = signal('');
+  imageZoom = signal(1);
+  imageViewerOpen = signal(false);
+  private explanationStream?: EventSource;
 
   accuracy = computed(() => calculateAccuracy(this.stats()));
   answered = computed(() => this.result() !== null);
@@ -36,6 +41,19 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     this.loadFilters();
     this.loadNextQuestion();
+  }
+
+  goToResult() {
+    document.getElementById('resultPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  ngOnDestroy() {
+    this.closeExplanationStream();
+  }
+
+  @HostListener('document:keydown.escape')
+  handleEscape() {
+    if (this.imageViewerOpen()) this.closeImageViewer();
   }
 
   loadFilters() {
@@ -51,11 +69,15 @@ export class AppComponent implements OnInit {
   }
 
   loadNextQuestion() {
+    this.closeExplanationStream();
     this.loading.set(true);
     this.error.set(null);
     this.result.set(null);
+    this.explanationLoading.set(false);
     this.selectedAlternative.set('');
+    this.submittedAlternative.set('');
     this.writtenAnswer.set('');
+    this.closeImageViewer();
 
     this.api
       .nextQuestion({
@@ -81,6 +103,11 @@ export class AppComponent implements OnInit {
     this.submit('ALTERNATIVE');
   }
 
+  skipQuestion() {
+    if (this.loading() || this.submitting()) return;
+    this.loadNextQuestion();
+  }
+
   submitWritten() {
     if (!this.writtenAnswer().trim()) {
       this.error.set('Digite uma resposta antes de enviar.');
@@ -92,8 +119,11 @@ export class AppComponent implements OnInit {
   submit(answerMode: 'ALTERNATIVE' | 'WRITTEN') {
     const question = this.question();
     if (!question) return;
+    const normalizedWritten = this.writtenAnswer().trim().toUpperCase();
+    const submittedAlternative = answerMode === 'ALTERNATIVE' ? this.selectedAlternative() : /^[A-E]$/.test(normalizedWritten) ? normalizedWritten : '';
 
     this.submitting.set(true);
+    this.submittedAlternative.set(submittedAlternative);
     this.error.set(null);
     this.api
       .submitAttempt({
@@ -106,6 +136,10 @@ export class AppComponent implements OnInit {
         next: (result) => {
           this.result.set(result);
           this.submitting.set(false);
+          this.explanationLoading.set(result.explanationStatus === 'PENDING');
+          if (result.explanationStatus === 'PENDING') {
+            this.listenForExplanation(result.attemptId);
+          }
           const nextStats = updateStats(this.stats(), {
             questionId: question.id,
             category: question.category,
@@ -113,9 +147,11 @@ export class AppComponent implements OnInit {
           });
           this.stats.set(nextStats);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(nextStats));
+          setTimeout(() => this.goToResult(), 80);
         },
         error: () => {
           this.submitting.set(false);
+          this.explanationLoading.set(false);
           this.error.set('Nao foi possivel corrigir essa resposta. Tente novamente.');
         },
       });
@@ -128,6 +164,55 @@ export class AppComponent implements OnInit {
 
   assetUrl(assetPath: string) {
     return assetPath.startsWith('http') ? assetPath : `/assets/${assetPath.replace(/^\/+/, '')}`;
+  }
+
+  increaseImageZoom() {
+    this.imageZoom.update((zoom) => Math.min(zoom + 0.25, 3));
+  }
+
+  decreaseImageZoom() {
+    this.imageZoom.update((zoom) => Math.max(zoom - 0.25, 0.75));
+  }
+
+  resetImageZoom() {
+    this.imageZoom.set(1);
+  }
+
+  openImageViewer() {
+    this.imageViewerOpen.set(true);
+  }
+
+  closeImageViewer() {
+    this.imageViewerOpen.set(false);
+    this.imageZoom.set(1);
+  }
+
+  private listenForExplanation(attemptId: string) {
+    this.closeExplanationStream();
+    this.explanationStream = new EventSource(`/api/explanations/stream?attemptId=${encodeURIComponent(attemptId)}`);
+    this.explanationStream.addEventListener('explanation.ready', (event) => {
+      const data = JSON.parse((event as MessageEvent<string>).data) as ExplanationReadyEvent;
+      const current = this.result();
+      if (!current || current.attemptId !== data.attemptId) return;
+
+      this.result.set({
+        ...current,
+        explanationStatus: 'READY',
+        explanation: data.explanation,
+        probableError: data.probableError,
+      });
+      this.explanationLoading.set(false);
+      this.closeExplanationStream();
+    });
+    this.explanationStream.onerror = () => {
+      this.explanationLoading.set(false);
+      this.closeExplanationStream();
+    };
+  }
+
+  private closeExplanationStream() {
+    this.explanationStream?.close();
+    this.explanationStream = undefined;
   }
 
   private loadStats(): StudyStats {

@@ -34,6 +34,20 @@ docker compose up --build
 
 Aplicacao: `http://localhost:8080`
 
+Seed de exemplo no container:
+
+```bash
+docker compose exec api npm run seed:prod -w @fatec-study/api
+```
+
+Importacao local com PDFs em `./provas`:
+
+```bash
+docker compose exec api npm run import:fatec:prod -w @fatec-study/api
+```
+
+Quando a pasta `provas` existir, a API prioriza esses PDFs locais em vez de tentar buscar no site da Fatec.
+
 ## Importando Provas da Fatec
 
 Com a API rodando:
@@ -43,10 +57,10 @@ curl -X POST http://localhost:3000/api/admin/import/fatec \
   -H "x-admin-token: change-me"
 ```
 
-Ou pelo workspace:
+Ou pelo container da API:
 
 ```bash
-npm run import:fatec
+docker compose exec api npm run import:fatec:prod -w @fatec-study/api
 ```
 
 O importador descobre os detalhes pela pagina oficial, baixa PDFs de prova/gabarito, extrai texto, cruza gabarito por numero da questao e salva tudo de forma idempotente.

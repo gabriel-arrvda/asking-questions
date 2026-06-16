@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { categoryKey, normalizeCategoryName } from '../importer/category-normalizer';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -13,7 +14,16 @@ export class QuestionsService {
       orderBy: { category: 'asc' },
     });
 
-    return groups.map((group) => ({ name: group.category, count: group._count._all }));
+    const merged = new Map<string, { name: string; count: number }>();
+    for (const group of groups) {
+      const name = normalizeCategoryName(group.category);
+      const key = categoryKey(name);
+      const current = merged.get(key) ?? { name, count: 0 };
+      current.count += group._count._all;
+      merged.set(key, current);
+    }
+
+    return [...merged.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }
 
   async exams() {
@@ -24,8 +34,9 @@ export class QuestionsService {
   }
 
   async next(filters: { category?: string; examId?: string }) {
+    const categoryFilter = filters.category ? await this.categoryVariants(filters.category) : undefined;
     const where: Prisma.QuestionWhereInput = {
-      ...(filters.category ? { category: filters.category } : {}),
+      ...(categoryFilter ? { category: { in: categoryFilter } } : {}),
       ...(filters.examId ? { examId: filters.examId } : {}),
     };
     const count = await this.prisma.question.count({ where });
@@ -41,6 +52,19 @@ export class QuestionsService {
     });
 
     return question;
+  }
+
+  private async categoryVariants(category: string) {
+    const key = categoryKey(category);
+    const existing = await this.prisma.question.findMany({
+      distinct: ['category'],
+      select: { category: true },
+    });
+    const variants = existing
+      .map((item) => item.category)
+      .filter((candidate) => categoryKey(candidate) === key);
+
+    return variants.length > 0 ? variants : [normalizeCategoryName(category)];
   }
 
   async get(id: string) {

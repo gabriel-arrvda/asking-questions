@@ -38,12 +38,16 @@ export class GeminiService {
 
     const prompt = [
       'Voce e um professor preparando resolucoes para vestibular Fatec.',
+      'A resposta correta segundo o gabarito oficial e a alternativa ' + question.correctAlternative,
       'Responda apenas em JSON valido, sem markdown.',
       'Schema: {"correctAnswer":"string","steps":["string"],"wrongAlternativeNotes":{"A":"string","B":"string","C":"string","D":"string","E":"string"}}',
       'Explique o passo a passo de forma curta, clara e didatica em portugues do Brasil.',
+      'Mas na conclusão diga qual a alternativa correta, exemplo: (A) texto da alternativa A.',
       'Para alternativas erradas, diga o erro provavel ou por que a alternativa nao serve.',
       JSON.stringify(question),
     ].join('\n');
+
+    console.log('Prompt enviado para Gemini:', prompt);
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${apiKey}`,
@@ -67,7 +71,14 @@ export class GeminiService {
 
     const payload = await response.json();
     const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
-    const parsed = ExplanationSchema.safeParse(JSON.parse(text));
+    let parsed: ReturnType<typeof ExplanationSchema.safeParse>;
+
+    try {
+      parsed = ExplanationSchema.safeParse(JSON.parse(text ?? '{}'));
+    } catch {
+      this.logger.warn('Gemini response was not valid JSON; using fallback explanation.');
+      return this.fallbackExplanation(question);
+    }
 
     if (!parsed.success) {
       this.logger.warn('Gemini response did not match schema; using fallback explanation.');

@@ -32,6 +32,7 @@ services:
       - "3000:3000"
     volumes:
       - uploads:/app/apps/api/uploads
+      - ./provas:/app/provas:ro
 
   web:
     build:

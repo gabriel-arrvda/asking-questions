@@ -23,7 +23,7 @@ export class AttemptsService {
       throw new BadRequestException('Answer is required');
     }
 
-    await this.prisma.attempt.create({
+    const attempt = await this.prisma.attempt.create({
       data: {
         questionId: input.questionId,
         answerMode: input.answerMode as AnswerMode,
@@ -34,18 +34,31 @@ export class AttemptsService {
       },
     });
 
-    const explanation = await this.explanations.ensureForQuestion(input.questionId);
-    const notes = explanation.wrongAlternativeNotes as Record<string, string>;
-    const probableError = evaluation.isCorrect ? null : notes[evaluation.normalizedAnswer] ?? 'Compare sua resposta com o passo a passo e revise o conceito principal da questao.';
+    const explanation = await this.explanations.findForQuestion(input.questionId);
+    const notes = explanation?.wrongAlternativeNotes as Record<string, string> | undefined;
+    const probableError = evaluation.isCorrect ? null : notes?.[evaluation.normalizedAnswer] ?? null;
+
+    if (!explanation) {
+      void this.explanations.generateForAttempt({
+        attemptId: attempt.id,
+        questionId: input.questionId,
+        normalizedAnswer: evaluation.normalizedAnswer,
+        isCorrect: evaluation.isCorrect,
+      });
+    }
 
     return {
+      attemptId: attempt.id,
       isCorrect: evaluation.isCorrect,
       correctAlternative: question.correctAlternative,
-      explanation: {
-        correctAnswer: explanation.correctAnswer,
-        steps: explanation.steps,
-        wrongAlternativeNotes: explanation.wrongAlternativeNotes,
-      },
+      explanationStatus: explanation ? 'READY' : 'PENDING',
+      explanation: explanation
+        ? {
+            correctAnswer: explanation.correctAnswer,
+            steps: explanation.steps,
+            wrongAlternativeNotes: explanation.wrongAlternativeNotes,
+          }
+        : null,
       probableError,
     };
   }
